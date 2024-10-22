@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/app/app.csproj",
-      "projectName": "app",
-      "projectPath": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/app/app.csproj",
+      "projectUniqueName": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/sort_card/sort_card.csproj",
+      "projectName": "sort_card",
+      "projectPath": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/sort_card/sort_card.csproj",
       "packagesPath": "/home/yarik/.nuget/packages/",
-      "outputPath": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/app/obj/",
+      "outputPath": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/sort_card/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/yarik/.nuget/NuGet/NuGet.Config"
