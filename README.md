@@ -8,4 +8,4 @@ Tool uses : \
 ```
 
 ## Status -  Task Name
- [x]   - Sort John card's by uncle card's
+- [x]-Sort John card's by uncle card's
