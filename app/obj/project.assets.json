@@ -8,24 +8,32 @@
     "net8.0": []
   },
   "packageFolders": {
-    "/home/yarik/.nuget/packages/": {}
+    "C:\\Users\\201\\.nuget\\packages\\": {},
+    "D:\\Visual Studio Share\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/app/app.csproj",
+      "projectUniqueName": "C:\\Users\\201\\source\\repos\\Semenov_Yaroslav_Artemovich\\app\\app.csproj",
       "projectName": "app",
-      "projectPath": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/app/app.csproj",
-      "packagesPath": "/home/yarik/.nuget/packages/",
-      "outputPath": "/home/yarik/projects/Semenov_Yaroslav_Artemovich/app/obj/",
+      "projectPath": "C:\\Users\\201\\source\\repos\\Semenov_Yaroslav_Artemovich\\app\\app.csproj",
+      "packagesPath": "C:\\Users\\201\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\201\\source\\repos\\Semenov_Yaroslav_Artemovich\\app\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "D:\\Visual Studio Share\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "/home/yarik/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\201\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -38,6 +46,11 @@
         "warnAsError": [
           "NU1605"
         ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
       }
     },
     "frameworks": {
@@ -59,7 +72,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/lib64/dotnet/sdk/8.0.108/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.400/PortableRuntimeIdentifierGraph.json"
       }
     }
   }
