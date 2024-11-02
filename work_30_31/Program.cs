@@ -34,16 +34,14 @@
             return array;
         }
 
+
+        static void get_index_of_min(int [] arr, int ind) {
+            int min;
+            
+        }
         static int[] sort_second(int[] array) {
             for (int i = 1; i < array.Length; i ++ ) {
-                int j = i - 1;
-                if (j >= 1 & array[i] > array[j]) {
-                    array[j + 1] = array[j];
-                    j --;
-                } else {
-                    array[j+1] = array[i-1];
-                    i ++; 
-                }
+
             }
             return array;
         }
