@@ -1,10 +1,10 @@
 ﻿namespace work40_41.Domain {
     public partial class Domain {
-        private static Dictionary<string, object?> input_handler_one() {
+        private static Dictionary<string, object?> input_handler_one(string key) {
             Dictionary<string, object?> result = new Dictionary<string, object?>(){};
             Console.WriteLine("Введите выбранное имя студента : ");
-            string inputName = Console.ReadLine() ?? "";
-
+            string searchValue = Console.ReadLine() ?? "";
+            result[key] = searchValue;
             return result;
         }
         private static Dictionary<string, object?> input_handler_two() {
