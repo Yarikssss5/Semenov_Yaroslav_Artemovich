@@ -1,13 +1,15 @@
-﻿namespace work40_41.Domain {
+﻿namespace work_40_41.Domain {
     public partial class Domain {
-        private static Dictionary<string, string> field_translations = new Dictionary<string, string>() {
+        private static readonly string sep = "    ";
+        private static readonly List<string> paramsNames = [ "name", "surname", "lastname", "group", "ball" ];
+        private static readonly Dictionary<string, string> field_translations = new Dictionary<string, string>() {
             {"name", "имя"},
             {"surname", "фамилия"},
             {"lastname", "отчество"},
             {"group", "группа"},
             {"ball", "бал"}
         };
-        private static Dictionary<string, string> solutions_texts = new Dictionary<string, string>(){
+        private static readonly Dictionary<string, string> solutions_texts = new Dictionary<string, string>(){
             {"1", "перечень фамилий с указанием числа студентов с такой фамилией"},
             {"2", "перечень имён с указанием числа студентов с таким именем"},
             {"3", "перечень отчеств с указанием числа студентов с таким отчеством"},

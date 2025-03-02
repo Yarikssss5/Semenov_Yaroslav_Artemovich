@@ -1,4 +1,4 @@
-﻿namespace work40_41.FileManager {
+﻿namespace work_40_41.FileManager {
     class FileWriter {
         private string filepath;
         public FileWriter(string? _filepath) {

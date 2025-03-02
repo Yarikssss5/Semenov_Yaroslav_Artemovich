@@ -1,4 +1,4 @@
-﻿namespace work40_41.FileManager {
+﻿namespace work_40_41.FileManager {
     class FileReader {
         private string filepath;
         public FileReader(string? _filepath) {
@@ -12,8 +12,8 @@
                 filepath = "";
             }
         }
-        public string[]? ReadLines() {
-            string[] lines = [];
+        public List<string>? ReadLines() {
+            List<string> lines = [];
             string line = "";
             try {
                 using (StreamReader sr = new StreamReader(filepath)) {
