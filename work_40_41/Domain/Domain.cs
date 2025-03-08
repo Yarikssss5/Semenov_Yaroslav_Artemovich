@@ -1,6 +1,4 @@
-﻿using work_40_41.Domain;
-
-namespace work_40_41.Domain {
+﻿namespace work_40_41.Domain {
     public partial class Domain {
         public Domain() {
             try {
