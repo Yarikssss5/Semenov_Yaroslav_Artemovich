@@ -1,15 +1,22 @@
-﻿namespace work_30_31 {
-    internal class Program {
-        static void Main() {
-            int[] arr = [ 1, 3, 4, 7, 89 ];
+﻿namespace work_30_31
+{
+    internal class Program
+    {
+        static void Main()
+        {
+            int[] arr = [1, 3, 4, 7, 89];
             foreach (int i in arr) Console.Write($" {i}");
-            Console.WriteLine("");
-            //arr = sort_first(arr);
-            arr = sort_second(arr);
+            Console.WriteLine("\nПервая сортировка (пузырьковая)");
+            arr = sort_first(arr);  // Первая сортировка (пузырьковая)
             foreach (int i in arr) Console.Write($" {i}");
+            Console.WriteLine("\nВторая сортировка (вставками)");
+            arr = sort_second(arr); // Вторая сортировка (вставками)
+            foreach (int i in arr) Console.Write($" {i}");
+            Console.WriteLine("\n");
         }
 
-        static int[] sort_first(int[] array) {
+        static int[] sort_first(int[] array)
+        {
             int tmp = 0;
             bool check = false;
             int length = array.Length;
@@ -27,21 +34,27 @@
                         }
                     }
                 }
-                length --;
+                length--;
                 if (length == 0) break;
                 if (check) break;
             }
             return array;
         }
 
+        static int[] sort_second(int[] array)
+        {
+            for (int i = 1; i < array.Length; i++)
+            {
+                int current = array[i];
+                int j = i - 1;
 
-        static void get_index_of_min(int [] arr, int ind) {
-            int min;
-            
-        }
-        static int[] sort_second(int[] array) {
-            for (int i = 1; i < array.Length; i ++ ) {
-
+                // Сдвигаем элементы больше текущего вправо
+                while (j >= 0 && array[j] > current)
+                {
+                    array[j + 1] = array[j];
+                    j--;
+                }
+                array[j + 1] = current;
             }
             return array;
         }
