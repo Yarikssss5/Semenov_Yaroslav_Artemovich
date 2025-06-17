@@ -1,29 +1,32 @@
-﻿using System.Text;
+using System.Text;
 
 namespace work_54_55 {
     internal class Program {
-        private static readonly List<string> cars_dev = new List<string>(){
-            "Toyota", "Ford", "Chevrolet", "Honda", "Nissan", "BMW",
-            "Mercedes-Benz", "Audi", "Volkswagen",  "Hyundai", "Kia"
-        };
-        private static void numbers_txt()  {
-            const string numbers_filename = "numbers.txt";
-            if (!File.Exists(numbers_filename)) File.Create(numbers_filename).Close();
-            else {
-                File.Delete(numbers_filename);
-                File.Create(numbers_filename).Close();
-            }
-            StringBuilder sb = new StringBuilder();
-            using(StreamWriter sw = new StreamWriter(numbers_filename)) {
-                for (int i = 0; i < 257; i++) {
-                    sb.Clear();
-                    sb.Append(i.ToString());
-                    if (i != 256) sw.Write($"{sb},");
-                    else sw.Write($"{sb}");
-                }
-            }
+        private static void numbers_txt()
+{
+
+    const string numbers_filename = "numbers.txt";
+
+    // Удаляем старый файл и создаём новый
+    if (File.Exists(numbers_filename))
+        File.Delete(numbers_filename);
+
+    using (StreamWriter sw = new StreamWriter(numbers_filename))
+    {
+        for (int i = 1; i < 257; i++)
+        {
+            if (i != 256)
+                sw.Write($"{i},");
+            else
+                sw.Write($"{i}");
         }
+    }
+}
         private static void cars_txt() {
+            List<string> cars_dev = new List<string>(){
+                "Toyota", "Ford", "Chevrolet", "Honda", "Nissan", "BMW",
+                "Mercedes-Benz", "Audi", "Volkswagen",  "Hyundai", "Kia"
+            };
             const string cars = "cars.txt";
             if (!File.Exists(cars)) File.Create(cars).Close();
             else{
@@ -106,11 +109,11 @@ namespace work_54_55 {
             }
         }
         private static void Main() {
-            //cars_txt();
-            //numbers_txt();
-            //findLongerLine();
-            //random_numbers_txt();
-            general_task();
+            // cars_txt();
+            numbers_txt();
+            // findLongerLine();
+            // random_numbers_txt();
+            // general_task();
         }
     }
 }
