@@ -1,0 +1,38 @@
+services:
+  rabbitmq:
+    hostname: rabbitmq
+    image: rabbitmq:4.0-management-alpine
+    restart: "always"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - RABBITMQ_DEFAULT_USER=myuser
+      - RABBITMQ_DEFAULT_PASS=1234
+
+  publisher:
+    build: "./publisher_app/."
+    restart: "always"
+    environment:
+      - RABBITMQ_USER=myuser
+      - RABBITMQ_PASSWORD=1234
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  subscriber:
+    build: "./subscriber_app/."
+    restart: "always"
+    environment:
+      - RABBITMQ_USER=myuser
+      - RABBITMQ_PASSWORD=1234
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
