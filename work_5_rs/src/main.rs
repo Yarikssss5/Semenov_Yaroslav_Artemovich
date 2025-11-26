@@ -1,39 +1,37 @@
-use prometheus::{Encoder, HistogramVec, IntCounterVec, IntGauge, TextEncoder, opts, register_histogram_vec, 
-  register_int_counter_vec, register_int_gauge};
-use axum::{Router as AxumRouter, extract::Request, http::{Method, StatusCode}, response::{Html, IntoResponse}, routing::get};
-use lazy_static::lazy_static;
+use std::convert::Infallible;
+
+use prometheus::{Encoder, TextEncoder};
+use axum::{Router as AxumRouter, body::HttpBody, extract::Request, 
+  http::{Method, StatusCode}, middleware::{self, Next}, 
+  response::{Html, IntoResponse, Response}, routing::get
+};
 use tokio::{net::TcpListener, time::Instant};
 
+use crate::sse::sse_handler;
 
-const HTTP_RESPONSE_TIME_CUSTOM_BUCKETS: &[f64; 14] = &[
-    0.0005, 0.0008, 0.00085, 0.0009, 0.00095, 0.001, 0.00105, 0.0011, 0.00115, 0.0012, 0.0015,
-    0.002, 0.003, 1.0,
-];
+mod metrics;
+mod sse;
 
-lazy_static! {
-   pub static ref HTTP_REQUESTS_TOTAL: IntCounterVec = register_int_counter_vec!(
-        opts!("my_http_requests_total", "HTTP requests total"),
-        &["method", "path"]
-    )
-    .expect("Can't create a metric");
-    pub static ref HTTP_CONNECTED_SSE_CLIENTS: IntGauge =
-        register_int_gauge!(opts!("my_http_connected_sse_clients", "Connected SSE clients"))
-            .expect("Can't create a metric");
-    pub static ref HTTP_RESPONSE_TIME_SECONDS: HistogramVec = register_histogram_vec!(
-        "my_http_response_time_seconds",
-        "HTTP response times",
-        &["method", "path"],
-        HTTP_RESPONSE_TIME_CUSTOM_BUCKETS.to_vec()
-    )
-    .expect("Can't create a metric");
+struct SSEGuard;
+
+impl SSEGuard {
+  fn new() -> Self {
+    metrics::HTTP_CONNECTED_SSE_CLIENTS.inc();
+    Self
+  }
 }
 
+impl Drop for SSEGuard {
+    fn drop(&mut self) {
+      metrics::HTTP_CONNECTED_SSE_CLIENTS.dec();
+    }
+}
 
 async fn index(method: Method, req: Request) -> impl IntoResponse {
   let start: Instant = Instant::now();
-  HTTP_REQUESTS_TOTAL.with_label_values(&[method.to_string(), req.uri().to_string()]).inc();
+  metrics::HTTP_REQUESTS_TOTAL.with_label_values(&[method.to_string(), req.uri().to_string()]).inc();
   let duration: f64 = start.elapsed().as_secs_f64();
-  HTTP_RESPONSE_TIME_SECONDS
+  metrics::HTTP_RESPONSE_TIME_SECONDS
         .with_label_values(&[method.to_string(), req.uri().to_string()])
         .observe(duration);
   Html("<h1>Hello !</h1>").into_response()
@@ -51,12 +49,22 @@ async fn metrics() -> impl IntoResponse {
     response.into_response()
 }
 
+async fn my_main_middleware(req: Request, next: Next) -> Result<Response, Infallible> {
+  let start: Instant = Instant::now();
+  let duration: f64 = start.elapsed().as_secs_f64();
+  let req_size: String = req.size_hint().lower().to_string();
+  metrics::HTTP_REQUEST_SIZE.with_label_values(&[req.method().as_str(), &req.uri().to_string(), &req_size])
+    .observe(duration);
+  Ok(next.run(req).await)
+}
 
 #[tokio::main]
 async fn main() {
   let rt: AxumRouter<_> = AxumRouter::new()
     .route("/", get(index))
-    .route("/metrics", get(metrics));
+    .route("/metrics", get(metrics))
+    .route("/sse", get(sse_handler))
+    .layer(middleware::from_fn(my_main_middleware));
   let listener: TcpListener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
   axum::serve(listener, rt).await.unwrap();
 }
