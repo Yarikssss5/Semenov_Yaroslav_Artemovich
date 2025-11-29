@@ -26,6 +26,6 @@ docker compose up -d
 cargo tauri dev
 ```
 
-[frontend sources](https://github.com/Yarikssss5/Semenov_Yaroslav_Artemovich/edit/main/work_6_rs/src)        
+[frontend sources](https://github.com/Yarikssss5/Semenov_Yaroslav_Artemovich/main/work_6_rs/src)        
 
-[backend sources](https://github.com/Yarikssss5/Semenov_Yaroslav_Artemovich/edit/main/work_6_rs/src-tauri/)
+[backend sources](https://github.com/Yarikssss5/Semenov_Yaroslav_Artemovich/main/work_6_rs/src-tauri/)
