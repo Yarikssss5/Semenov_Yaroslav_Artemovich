@@ -25,3 +25,5 @@ Run :
 docker compose up -d
 cargo tauri dev
 ```
+
+(frontend sources)[./src] (backend sources)[./src-tauri]
