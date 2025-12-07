@@ -1,0 +1,11 @@
+
+services:
+
+  rabbitmq:
+    container_name: wokr_4_rs_rabbitmq
+    image: rabbitmq:4.0-management-alpine
+    ports:
+      - "0.0.0.0:15672:15672"
+      - "0.0.0.0:5672:5672"
+      - "0.0.0.0:5552:5552"
+    
