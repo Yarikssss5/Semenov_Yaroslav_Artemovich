@@ -1,0 +1,190 @@
+use std::collections::HashSet;
+use redis::{ToRedisArgs, AsyncTypedCommands, ToSingleRedisArg, aio::MultiplexedConnection};
+use crate::{Friend, MyAction, MyActionKind, MyFileParsed, MyTask, MyTaskPriority};
+
+// Task 1
+
+impl ToRedisArgs for MyFileParsed {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite {
+            let json: String = serde_json::to_string(self).unwrap();
+            out.write_arg(json.as_bytes());
+    }
+}
+
+// Task 2
+impl ToRedisArgs for MyAction {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite {
+           let json: String = serde_json::to_string(self).unwrap();
+            out.write_arg(json.as_bytes()); 
+    }
+}
+
+impl ToRedisArgs for MyActionKind {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite {
+        let json: String = serde_json::to_string(self).unwrap();
+        out.write_arg(json.as_bytes());
+    }
+}
+
+impl ToSingleRedisArg for MyAction {}
+
+
+// Task 3 
+
+pub struct FriendService(pub String);
+
+impl FriendService {
+
+    pub fn new(arg: String) -> Self {
+        Self(arg)
+    }
+
+    pub async fn add_friend(&self, user_id: u64, friend_id: u64, conn: &mut MultiplexedConnection) -> Result<(), String> {
+        // Добавляем в обоих направлениях (симметричные отношения)
+        let user_key: String = format!("friends:{}", user_id);
+        let friend_key: String = format!("friends:{}", friend_id);
+        let _: (i32, i32, i32, i32) = redis::pipe().atomic()
+            .sadd(&user_key, friend_id)
+            .sadd(&friend_key, user_id)
+            // Удаляем из входящих заявок, если они были
+            .srem(format!("incoming_requests:{}", user_id), friend_id)
+            .srem(format!("incoming_requests:{}", friend_id), user_id)
+            .query_async(conn).await.map_err(|e: redis::RedisError| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn remove_friend(&self, user_id: u64, friend_id: u64, conn: &mut MultiplexedConnection) -> Result<(bool, bool), String> {
+        let user_key: String = format!("friends:{}", user_id);
+        let friend_key: String = format!("friends:{}", friend_id);
+        let (user_removed, friend_removed): (bool, bool) = redis::pipe().atomic()
+            .srem(&user_key, friend_id)
+            .srem(&friend_key, user_id)
+            .query_async(conn)
+            .await.map_err(|e: redis::RedisError| e.to_string())?;
+        Ok((user_removed, friend_removed))
+    }
+
+    // 1.1. Получение списка друзей
+    pub async fn get_friends(&self, user_id: u64, conn: &mut MultiplexedConnection) -> Result<Vec<u64>, String> {
+        let key: String = format!("friends:{}", user_id);
+        let friends: std::collections::HashSet<String> = conn.smembers(&key).await.map_err(|e: redis::RedisError| e.to_string())?;
+        let friends_result: Result<Vec<u64>, _> = friends.into_iter().map(|s: String| s.parse::<u64>()).collect();
+        friends_result.map_err(|e: std::num::ParseIntError| e.to_string())
+    }
+    
+    // 1.1. Проверка, являются ли пользователи друзьями
+    pub async fn is_friend(&self, user_id: u64, friend_id: u64, conn: &mut MultiplexedConnection) -> Result<bool, String> {
+        let key: String = format!("friends:{}", user_id);
+        let is_member: bool = conn.sismember(&key, friend_id).await.map_err(|e| e.to_string())?;
+        Ok(is_member)
+    }
+
+    // 1.3. Рекомендации друзей (друзья друзей)
+    pub async fn get_friend_recommendations(&self, user_id: u64, limit: Option<usize>, conn: &mut MultiplexedConnection) -> Result<Vec<u64>, String> {
+        let user_key: String = format!("friends:{}", user_id);
+        // Получаем всех друзей пользователя как строки
+        let friends_set: std::collections::HashSet<String> = conn.smembers(&user_key).await.map_err(|e: redis::RedisError| e.to_string())?;
+        if friends_set.is_empty() {
+            return Ok(Vec::new());
+        }
+        // Преобразуем строки в числа и создаем ключи
+        let mut friend_ids: Vec<u64> = Vec::new();
+        let mut friend_keys: Vec<String> = Vec::new();
+        for friend_str in friends_set {
+            match friend_str.parse::<u64>() {
+                Ok(friend_id) => {
+                    friend_ids.push(friend_id);
+                    friend_keys.push(format!("friends:{}", friend_id));
+                }
+                Err(e) => return Err(format!("Invalid friend ID '{}': {}", friend_str, e)),
+            }
+        }
+        // Используем SUNION для объединения всех множеств друзей
+        let all_friends_of_friends_set: HashSet<String> = if friend_keys.len() == 1 {
+            conn.smembers(&friend_keys[0])
+                .await
+                .map_err(|e: redis::RedisError| e.to_string())?
+        } else {
+            conn.sunion(friend_keys)
+                .await
+                .map_err(|e: redis::RedisError| e.to_string())?
+        };
+        // Преобразуем в Vec<u64> и фильтруем
+        let mut all_friends_of_friends: Vec<u64> = Vec::new();
+        for friend_str in all_friends_of_friends_set {
+            if let Ok(friend_id) = friend_str.parse::<u64>() {
+                if friend_id != user_id && !friend_ids.contains(&friend_id) {
+                    all_friends_of_friends.push(friend_id);
+                }
+            }
+        }
+        // Применяем лимит
+        if let Some(limit) = limit {
+            all_friends_of_friends.truncate(limit);
+        }
+        Ok(all_friends_of_friends)
+    }
+
+    pub async fn get_profile_by_id(user_id: u64, conn: &mut MultiplexedConnection) -> Result<Friend, String> {
+        let profile_key: String = format!("user:{}:profile", user_id);
+        let Some(username) = conn.hget(&profile_key, "username").await.map_err(|e: redis::RedisError| e.to_string())? else {
+            return Err("username in redis empty !".to_string());
+        };
+        Ok(Friend { id: user_id, username})
+    }
+
+}
+
+// Task 4
+
+pub struct MyTaskService {}
+
+impl ToRedisArgs for MyTask {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite {
+        let json = serde_json::to_string(self).unwrap();
+        out.write_arg(json.as_bytes());
+    }
+}
+
+impl ToSingleRedisArg for MyTask {}
+
+impl From<MyTaskPriority> for u8 {
+    fn from(value: MyTaskPriority) -> Self {
+        match value {
+            MyTaskPriority::Common => 0,
+            MyTaskPriority::Emergancy => 1,
+            MyTaskPriority::Expired => 2,
+        }
+    }
+}
+
+impl MyTaskService {
+    pub async fn add_task(task: MyTask, conn: &mut MultiplexedConnection) -> Result<(), String> {
+        conn.zadd("my_tasks", task.str.clone(), u8::from(task.priority)).await.map_err(|e: redis::RedisError| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn remove_task(task: MyTask, conn: &mut MultiplexedConnection) -> Result<(), String> {
+        conn.zrem("my_tasks", task.str.clone()).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn get_sorted_tasks_by_priority(conn: &mut MultiplexedConnection) -> Result<Vec<MyTask>, String> {
+        let res: Vec<String> = {conn.zrange("my_tasks", 0, -1).await.map_err(|e: redis::RedisError| e.to_string())? };
+        let mut result: Vec<MyTask> = vec![];
+        for i in res {
+            println!("{}", i.clone());
+            let Some(priority) = conn.zscore("my_tasks", i.clone()).await.map_err(|e| e.to_string())? else { return Ok(result); };
+            result.push(MyTask { str: i.clone(), priority: From::from(priority) });
+        }
+        Ok(result)
+    }
+}

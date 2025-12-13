@@ -1,0 +1,25 @@
+[package]
+name = "work_11_rs-ui"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+yew = { version = "0.21", features = ["csr"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = {version = "0.3", features = ["default", "HtmlAnchorElement", "Document", "Window", "Element", "Node"] }
+js-sys = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1.7"
+my_models = { version = "0.1.0", path = "my_models" }
+serde_json = "1.0.145"
+base64 = "0.22.1"
+gloo = "0.11.0"
+gloo-utils = "0.2.0"
+gloo-file = { version = "0.3.0", features = ["futures", "mime"] }
+gloo-net = "0.6.0"
+
+[workspace]
+members = ["my_models","src-tauri"]
