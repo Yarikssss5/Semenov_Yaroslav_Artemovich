@@ -4,7 +4,7 @@ use redis::{aio::MultiplexedConnection, AsyncTypedCommands, RedisError};
 use tauri::{App, AppHandle, Manager, State, async_runtime};
 use tokio::{io::AsyncWriteExt, sync::{Mutex as TokioMutex, MutexGuard}};
 use std::path;
-use my_models::{Friend, MyAction, MyFileParsed, MyProduct, MyProductInCart, MyTask, native::{FriendService, MyProductCartServices, MyTaskService}};
+use my_models::{Friend, MyAction, MyFileParsed, MyNotification, MyProductInCart, MyTask, native::{FriendService, MyNotificationService, MyProductCartServices, MyTaskService}};
 
 fn get_exe_dir() -> Option<path::PathBuf> {
     match std::env::current_exe() {
@@ -355,8 +355,17 @@ async fn my_decrement_product_count(product_id: u64, increment_by: u64, state: S
     MyProductCartServices::decrement_product_count(product_id, increment_by, conn).await
 }
 
-
 // Task 6
+#[tauri::command]
+async fn my_get_notifications(state: State<'_, WrappedState>) -> Result<Vec<MyNotification>, String> {
+    let mut state: MutexGuard<'_, AppState> = state.lock().await;
+    state.check_connection().await?;
+    let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+    let res: Vec<(String, String)> = MyNotificationService::listen_easy(conn).await?;
+    let final_res: Vec<MyNotification> = res.iter()
+        .map(|(author, text)| {MyNotification { author: author.to_string(), text: text.to_string() }}).collect();
+    Ok(final_res)
+}
 
 
 // Connecting to redis before start app :
@@ -364,13 +373,23 @@ async fn setup(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Err
     let client: redis::Client = redis::Client::open("redis://127.0.0.1/")?;
     let con: MultiplexedConnection = client.get_multiplexed_async_connection().await?;
     let app: &AppHandle = app.handle();
-    let state = TokioMutex::new(AppState { redis_con: Some(con), client: Some(client) });
+    let state: TokioMutex<AppState> = TokioMutex::new(AppState { redis_con: Some(con), client: Some(client) });
     app.manage(state);
     {
         match t3_init(app.state()).await {
             Ok(res) => println!("{}", res),
             Err(e) => eprintln!("{}", e)
         }; 
+    };
+    {
+        let state: State<'_, WrappedState> = app.state();
+        let mut state: MutexGuard<'_, AppState> = state.lock().await;
+        state.check_connection().await?;
+        let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+        match MyNotificationService::init(conn).await {
+            Ok(_) => {},
+            Err(e) => eprintln!("{}", e)
+        };
     };
     Ok(())
 }
@@ -406,7 +425,9 @@ pub fn run() {
             my_remove_product,
             my_get_all_products_from_cart,
             my_increment_product_count,
-            my_decrement_product_count
+            my_decrement_product_count,
+            // Task 6 : 
+            my_get_notifications
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

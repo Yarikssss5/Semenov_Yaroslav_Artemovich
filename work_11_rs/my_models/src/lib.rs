@@ -134,6 +134,11 @@ macro_rules! my_rub {
 }
 
 // Task 6 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct MyNotification {
+    pub author: String,
+    pub text: String
+}
 
 
 pub struct MyU64(pub u64);

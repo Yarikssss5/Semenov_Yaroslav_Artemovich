@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet, hash_map};
-use redis::{ToRedisArgs, AsyncTypedCommands, ToSingleRedisArg, aio::MultiplexedConnection};
-use crate::{Friend, MyAction, MyActionKind, MyFileParsed, MyProduct, MyProductInCart, MyTask, MyTaskPriority};
+use std::collections::HashSet;
+use redis::{AsyncTypedCommands, ToRedisArgs, ToSingleRedisArg, aio::MultiplexedConnection, streams::StreamReadReply};
+use crate::{Friend, MyAction, MyActionKind, MyFileParsed, MyNotification, MyProduct, MyProductInCart, MyTask, MyTaskPriority};
 
 // Task 1
 
@@ -264,3 +264,58 @@ impl MyProductCartServices {
 }
 
 // Task 6 
+pub struct MyNotificationService {}
+
+impl MyNotificationService {
+    pub async fn init(conn: &mut MultiplexedConnection) -> Result<(), String> {
+        conn.xgroup_create_mkstream("my_notifications", "default", "0").await.map_err(|e: redis::RedisError| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn push(notification: MyNotification, conn: &mut MultiplexedConnection) -> Result<(), String> {
+        let fields: Vec<(&str, String)> = vec![ 
+            ("author", notification.author.clone()), 
+            ("text", notification.text.clone()) 
+        ];
+        let _ = conn.xadd("my_notifications", "*", &fields).await.map_err(|e: redis::RedisError| e.to_string())?;
+        Ok(())
+    }
+     
+    pub async fn listen_easy(conn: &mut MultiplexedConnection) -> Result<Vec<(String, String)>, String> {
+        let result: Option<StreamReadReply> = { conn
+            .xread(&["notifications"], &["$"])
+            .await
+            .map_err(|e: redis::RedisError| e.to_string())? };
+        
+        let Some(result) = result else {
+            return Ok(Vec::new()); // пустой результат - это нормально
+        };
+        let mut messages: Vec<(String, String)> = Vec::new();
+        // StreamReadReply содержит поле keys: Vec<StreamKey>
+        for stream_key in result.keys {
+            // StreamKey содержит поле ids: Vec<StreamId>
+            for stream_id in stream_key.ids {
+                let message_id: String = stream_id.id.clone();
+                // StreamId содержит поле map: Vec<(String, String)>
+                let author: Option<redis::Value> = stream_id.map.iter()
+                    .find(|(k, _)| *k == "author")
+                    .map(|(_, v)| v.clone());
+                
+                let text: Option<redis::Value> = stream_id.map.iter()
+                    .find(|(k, _)| *k == "text")
+                    .map(|(_, v)| v.clone());
+                
+                if let (Some(author), Some(text)) = (author, text) {
+                    if let redis::Value::SimpleString(author) = author {
+                        if let redis::Value::SimpleString(text) = text {
+                            conn.xack("my_notifications", "default", &[message_id]).await
+                                .map_err(|e: redis::RedisError| e.to_string())?;
+                            messages.push((author, text));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(messages)
+    }
+}
