@@ -1,6 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, hash_map};
 use redis::{ToRedisArgs, AsyncTypedCommands, ToSingleRedisArg, aio::MultiplexedConnection};
-use crate::{Friend, MyAction, MyActionKind, MyFileParsed, MyTask, MyTaskPriority};
+use crate::{Friend, MyAction, MyActionKind, MyFileParsed, MyProduct, MyProductInCart, MyTask, MyTaskPriority};
 
 // Task 1
 
@@ -142,7 +142,6 @@ impl FriendService {
 }
 
 // Task 4
-
 pub struct MyTaskService {}
 
 impl ToRedisArgs for MyTask {
@@ -188,3 +187,80 @@ impl MyTaskService {
         Ok(result)
     }
 }
+
+// Task 5 
+pub struct MyProductCartServices {}
+
+impl MyProductCartServices {
+    pub async fn add_product(product: MyProduct, count: u64, conn: &mut MultiplexedConnection) -> Result<(), String> {
+
+        println!("=== ADD PRODUCT DEBUG ===");
+        println!("product.id: {:?}", product.id);
+        println!("product.name: {:?}", product.name);
+        println!("product.name.is_empty(): {}", product.name.is_empty());
+        println!("product.cost: {:?}", product.cost);
+        println!("count: {:?}", count);
+         // СОХРАНЯЕМ строки в переменные!
+        let args: Vec<(String, String)> = vec![
+            (format!("prod:{}", product.id), product.name),
+            (format!("prod:{}-count", product.id), count.to_string()),
+            (format!("prod:{}-cost", product.id), product.cost.to_string()),
+        ];
+        conn.hset_multiple("my_cart", &args).await.map_err(|e: redis::RedisError| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn remove_product(product_id: u64, conn: &mut MultiplexedConnection) -> Result<(), String> {
+        conn.hdel("my_cart", &format!("prod:{}", product_id)).await.map_err(|e: redis::RedisError| e.to_string())?;
+        conn.hdel("my_cart", &format!("prod:{}-count", product_id)).await.map_err(|e: redis::RedisError| e.to_string())?;
+        conn.hdel("my_cart", &format!("prod:{}-cost", product_id)).await.map_err(|e: redis::RedisError| e.to_string())?;
+        Ok(())
+    } 
+
+    pub async fn get_all_products_from_cart(conn: &mut MultiplexedConnection) -> Result<Vec<MyProductInCart>, String> {
+        let res: std::collections::HashMap<String, String> = { conn.hgetall("my_cart").await.map_err(|e: redis::RedisError| e.to_string())?};
+        let mut products: Vec<MyProduct> = vec![];
+        // Сначала собираем базовую информацию о продуктах
+        for (key, name) in &res {
+            // Проверяем, что это основной ключ продукта (без суффиксов)
+            if key.starts_with("prod:") && !key.contains('-') {
+                if let Some(id_str) = key.strip_prefix("prod:") {
+                    if let Ok(id) = id_str.parse::<u64>() {
+                        products.push(MyProduct { name: name.clone(), cost: 0, id: id });
+                    }
+                }
+            }
+        }
+        // Теперь собираем полную информацию с количеством и стоимостью
+        let mut products_in_cart: Vec<MyProductInCart> = Vec::new();
+        for product in products {
+            let count_key: String = format!("prod:{}-count", product.id);
+            let count: u64 = res.get(&count_key).and_then(|s: &String| s.parse::<u64>().ok()).unwrap_or(0);
+            let cost_key: String = format!("prod:{}-cost", product.id);
+            let cost: u64 = res.get(&cost_key).and_then(|s: &String| s.parse::<u64>().ok()).unwrap_or(0);
+            products_in_cart.push(MyProductInCart { product: MyProduct { name: product.name, cost: cost, id: product.id }, count: count });
+        }
+        Ok(products_in_cart)
+    }
+
+    pub async fn increment_product_count(product_id: u64, increment_by: u64, conn: &mut MultiplexedConnection) -> Result<u64, String> {
+        // Используем HINCRBY для атомарного изменения
+        let new_count: f64 = conn.hincr("my_cart", &format!("prod:{}-count", product_id), increment_by).await
+            .map_err(|e: redis::RedisError| e.to_string())?;
+        if new_count < 0.into() {
+            return Err("Количество не может быть отрицательным".to_string());
+        }
+        Ok(new_count as u64)
+    }
+
+    pub async fn decrement_product_count(product_id: u64, increment_by: u64, conn: &mut MultiplexedConnection) -> Result<u64, String> {
+        let new_count: f64 = conn.hincr("my_cart", &format!("prod:{}-count", product_id), -1 * i128::from(increment_by)).await
+            .map_err(|e: redis::RedisError| e.to_string())?;
+        if new_count < 0.into() {
+            return Err("Количество не может быть отрицательным".to_string());
+        }
+        Ok(new_count as u64)
+    }
+}
+
+// Task 6 

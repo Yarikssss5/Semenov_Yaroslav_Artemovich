@@ -28,4 +28,5 @@ my_models = { version = "0.1.0", path = "../my_models", features = ["native"] }
 futures = "0.3.31"
 url = "2.5.7"
 base64 = "0.22.1"
+rand = "0.9.2"
 

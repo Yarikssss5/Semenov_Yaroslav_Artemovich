@@ -54,8 +54,6 @@ pub struct Recommendation {
 }
 
 // Task 4 
-
-
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum MyTaskPriority {
     Common,
@@ -110,6 +108,51 @@ impl From<f64> for MyTaskPriority {
             Self::Expired
         } else {
             Self::Common
+        }
+    }
+}
+
+// Task 5 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct MyProduct {
+    pub name: String,
+    pub cost: u64,
+    pub id: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct MyProductInCart {
+    pub product: MyProduct,
+    pub count: u64,
+}
+
+#[macro_export]
+macro_rules! my_rub {
+    ($rubles:expr) => {
+        $rubles * 100
+    };
+}
+
+// Task 6 
+
+
+pub struct MyU64(pub u64);
+
+impl From<MyU64> for u64 {
+    fn from(value: MyU64) -> Self {
+        value.0
+    }
+}
+
+
+
+impl TryFrom<String> for MyU64 {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match u64::from_str_radix(&value, 10) {
+            Ok(val) => Ok(Self(val)),
+            Err(e) => Err(e.to_string())
         }
     }
 }

@@ -1,9 +1,10 @@
 use base64::{Engine, engine::general_purpose};
+use rand::Rng;
 use redis::{aio::MultiplexedConnection, AsyncTypedCommands, RedisError};
 use tauri::{App, AppHandle, Manager, State, async_runtime};
 use tokio::{io::AsyncWriteExt, sync::{Mutex as TokioMutex, MutexGuard}};
 use std::path;
-use my_models::{Friend, MyAction, MyFileParsed, MyTask, native::{FriendService, MyTaskService}};
+use my_models::{Friend, MyAction, MyFileParsed, MyProduct, MyProductInCart, MyTask, native::{FriendService, MyProductCartServices, MyTaskService}};
 
 fn get_exe_dir() -> Option<path::PathBuf> {
     match std::env::current_exe() {
@@ -42,6 +43,18 @@ impl AppState {
     }
 }
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+
+// Serialization test's :
+#[tauri::command]
+async fn my_error() -> Result<(), String> {
+    let mut rng: rand::prelude::ThreadRng = rand::rng();
+    match rng.random::<bool>() {
+        true => Ok(()),
+        false => Err("Error unexapted ecxaption !".to_string())
+    }
+}
+
+// Task 1
 // SET my_my.txt
 #[tauri::command]
 async fn my_cache_file(state: State<'_, WrappedState>, file: MyFileParsed) -> Result<(), String> {
@@ -300,6 +313,47 @@ async fn my_get_sorted_by_score_tasks(state: State<'_, WrappedState>) -> Result<
 }
 
 // Task 5
+#[tauri::command]
+async fn my_add_product(state: State<'_, WrappedState>, product: MyProductInCart) -> Result<(), String> {
+    let mut state: MutexGuard<'_, AppState> = state.lock().await;
+    state.check_connection().await?;
+    let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+    MyProductCartServices::add_product(product.product, product.count, conn).await?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn my_remove_product(state: State<'_, WrappedState>, product_id: u64) -> Result<(), String> {
+    let mut state: MutexGuard<'_, AppState> = state.lock().await;
+    state.check_connection().await?;
+    let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+    MyProductCartServices::remove_product(product_id, conn).await?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn my_get_all_products_from_cart(state: State<'_, WrappedState>) -> Result<Vec<MyProductInCart>, String> {
+    let mut state: MutexGuard<'_, AppState> = state.lock().await;
+    state.check_connection().await?;
+    let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+    MyProductCartServices::get_all_products_from_cart(conn).await
+}
+
+#[tauri::command]
+async fn my_increment_product_count(product_id: u64, increment_by: u64, state: State<'_, WrappedState>) -> Result<u64, String> {
+    let mut state: MutexGuard<'_, AppState> = state.lock().await;
+    state.check_connection().await?;
+    let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+    MyProductCartServices::increment_product_count(product_id, increment_by, conn).await
+}
+
+#[tauri::command]
+async fn my_decrement_product_count(product_id: u64, increment_by: u64, state: State<'_, WrappedState>) -> Result<u64, String> {
+    let mut state: MutexGuard<'_, AppState> = state.lock().await;
+    state.check_connection().await?;
+    let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+    MyProductCartServices::decrement_product_count(product_id, increment_by, conn).await
+}
 
 
 // Task 6
@@ -317,7 +371,7 @@ async fn setup(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Err
             Ok(res) => println!("{}", res),
             Err(e) => eprintln!("{}", e)
         }; 
-    }
+    };
     Ok(())
 }
 
@@ -327,6 +381,7 @@ pub fn run() {
         .setup(|app: &mut App| async_runtime::block_on(setup(app)))
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            my_error,
             // Task 1 : 
             my_cache_file, 
             get_all_static_files,
@@ -345,7 +400,13 @@ pub fn run() {
             // Task 4 :
             my_add_task,
             my_remove_task,
-            my_get_sorted_by_score_tasks
+            my_get_sorted_by_score_tasks,
+            // Task 5 :
+            my_add_product,
+            my_remove_product,
+            my_get_all_products_from_cart,
+            my_increment_product_count,
+            my_decrement_product_count
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,8 +1,9 @@
-use my_models::{Friend, MyAction, MyFileParsed, MyTask};
+use my_models::{Friend, MyAction, MyFileParsed, MyProductInCart, MyTask};
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-use crate::{task_1::Task1, task_2::Task2, task_3::Task3, task_4::Task4};
+use crate::{task_1::Task1, task_2::Task2, task_3::Task3, task_4::Task4, task_5::Task5};
 
 #[wasm_bindgen]
 extern "C" {
@@ -15,25 +16,18 @@ extern "C" {
 }
 
 fn js_value_to_json_str(value: &JsValue) -> String {
-    if value.is_null() {
-        return "null".to_string();
-    }
-    if value.is_undefined() {
-        return "undefined".to_string();
-    }
+    if value.is_null() {  return "null".to_string();  }
+    if value.is_undefined() {   return "undefined".to_string();   }
     let result = js_sys::JSON::stringify(value);
-    
     if let Ok(js_string) = result {
         if let Some(rust_string) = js_string.as_string() {
             return rust_string;
         }
     }
-    
     // Если все остальное не сработало, пытаемся как простую строку
     if let Some(str_val) = value.as_string() {
         return str_val;
     }
-    
     // Для отладки
     web_sys::console::warn_1(&"Failed to convert JsValue to string".into());
     "".to_string()
@@ -90,7 +84,6 @@ pub(crate) async fn my_cache_file(file: MyFileParsed) -> Result<String, String> 
         Err(e) => Err(e.to_string()),
     }
 }
-
 
 // pub(crate) async fn my_get_static_file(file_name: String) -> Result<MyFileParsed, String> {
 //     let args: JsValue = serde_wasm_bindgen::to_value(&serde_json::json!({ "filename": file_name }))
@@ -262,6 +255,70 @@ pub(crate) async fn my_get_sorted_by_score_tasks() -> Result<Vec<MyTask>, String
     }
 }
 
+// Task 5 :
+
+pub(crate) async fn my_add_product(product: MyProductInCart) -> Result<(), String> {
+    let args = serde_wasm_bindgen::to_value(&serde_json::json!({ "product": product })).map_err(|e| e.to_string())?;
+    web_sys::console::log_1(&args.clone());
+    let result = invoke("my_add_product", args).await;
+    let res_str = js_value_to_json_str(&result);
+    if "null" == res_str {
+        return Ok(())
+    }
+    Err(res_str)
+}
+
+pub(crate) async fn my_remove_product(product_id: u64) -> Result<(), String> {
+    let args: JsValue = serde_wasm_bindgen::to_value(&serde_json::json!({ "productId": product_id })).map_err(|e: serde_wasm_bindgen::Error| e.to_string())?;
+    let res: JsValue = invoke("my_remove_product", args).await;
+    let res_str: String = js_value_to_json_str(&res);
+    if "null" == res_str {
+        Ok(())
+    } else {
+        Err(res_str)
+    }
+}
+
+pub(crate) async fn my_get_all_products_from_cart() -> Result<Vec<MyProductInCart>, String> {
+    let res: JsValue = invoke_without_args("my_get_all_products_from_cart").await;
+    let res_str: String = js_value_to_json_str(&res);
+    if res_str == "[]" {
+        return Ok(vec![]);
+    }
+    match  serde_wasm_bindgen::from_value::<Vec<MyProductInCart>>(res) {
+        Ok(res) => Ok(res),
+        Err(_) => Err(res_str)
+    }
+}
+
+pub(crate) async fn my_increment_product_count(product_id: u64, increment_by: u64) -> Result<(), String> {
+    let args: JsValue = serde_wasm_bindgen::to_value(&serde_json::json!({ "productId": product_id, "incrementBy": increment_by })).map_err(|e| e.to_string())?;
+    let res: JsValue = invoke("my_increment_product_count", args).await;
+    let res_str: String = js_value_to_json_str(&res);
+    if "null" == res_str {
+        Ok(())
+    } else {
+        Err(res_str)
+    }
+}
+
+pub(crate) async fn my_decrement_product_count(product_id: u64, increment_by: u64) -> Result<(), String> {
+    let args: JsValue = serde_wasm_bindgen::to_value(&serde_json::json!({ "productId": product_id, "incrementBy": increment_by })).map_err(|e| e.to_string())?;
+    let res: JsValue = invoke("my_decrement_product_count", args).await;
+    let res_str: String = js_value_to_json_str(&res);
+    if "null" == res_str {
+        Ok(())
+    } else {
+        Err(res_str)
+    }    
+}
+
+async fn my_error() -> Result<(), String> {
+    let res: JsValue = invoke_without_args("my_error").await;
+    web_sys::console::log_1(&res.is_string().into());
+    Ok(())
+}
+
 enum MyPages {
     Main,
     Task1,
@@ -295,13 +352,18 @@ pub fn app() -> Html {
                 <button onclick={Callback::from(move|_:MouseEvent| task_4.set(MyPages::Task4))}>{" Task 4 "}</button> 
                 <button onclick={Callback::from(move|_:MouseEvent| task_5.set(MyPages::Task5))}>{" Task 5 "}</button> 
                 <button onclick={Callback::from(move|_:MouseEvent| task_6.set(MyPages::Task6))}>{" Task 6 "}</button>
+                <button onclick={Callback::from(move|_:MouseEvent| {
+                    spawn_local(async move {
+                        let _ = my_error().await;
+                    });
+                })} >{" My Error ! "}</button>
             </main>
         },
         MyPages::Task1 => html!{ <Task1 back_callback={back_to_main_callback.clone()} /> },
         MyPages::Task2 => html!( <Task2 /> ),
         MyPages::Task3 => html!( <Task3 /> ),
         MyPages::Task4 => html!( <Task4 /> ),
-        MyPages::Task5 => todo!(),
+        MyPages::Task5 => html!( <Task5 /> ),
         MyPages::Task6 => todo!(),
     }
 }
