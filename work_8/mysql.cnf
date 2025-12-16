@@ -1,0 +1,8 @@
+[client]
+host=mysql
+port=3306
+user=root
+password=root
+[client.server1]
+user = root
+password = root
