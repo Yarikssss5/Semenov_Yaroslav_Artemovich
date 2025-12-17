@@ -1,0 +1,8 @@
+[2025-12-17 20:50:37] [OK] Google - https://google.com - HTTP: 200 - Время: 1.609874s
+[2025-12-17 20:50:38] [OK]  - https://ya.ru - HTTP: 200 - Время: 0.270085s
+[2025-12-17 20:50:40] [OK] GitHub - https://github.com - HTTP: 200 - Время: 0.745802s
+[2025-12-17 20:50:42] [CLIENT_ERROR] Yarik - https://yarik.twc1.net - HTTP: 404 - Время: 0.657732s
+[2025-12-17 20:51:14] [OK] Google - https://google.com - HTTP: 200 - Время: 1.588629s
+[2025-12-17 20:51:15] [OK]  - https://ya.ru - HTTP: 200 - Время: 0.221253s
+[2025-12-17 20:51:17] [OK] GitHub - https://github.com - HTTP: 200 - Время: 0.681876s
+[2025-12-17 20:51:18] [CLIENT_ERROR] Yarik - https://yarik.twc1.net - HTTP: 404 - Время: 0.244897s

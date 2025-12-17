@@ -1,0 +1,26 @@
+{
+  "last_update": "2025-12-17 20:49:36",
+  "sites": {
+    "Google": {
+      "url": "https://google.com",
+      "code": "200",
+      "response_time": "1.676297",
+      "status": "OK",
+      "last_check": "2025-12-17 20:49:36"
+    },
+    "": {
+      "url": "https://ya.ru",
+      "code": "200",
+      "response_time": "0.502053",
+      "status": "OK",
+      "last_check": "2025-12-17 20:49:38"
+    },
+    "GitHub": {
+      "url": "https://github.com",
+      "code": "200",
+      "response_time": "0.872201",
+      "status": "OK",
+      "last_check": "2025-12-17 20:49:39"
+    }
+  }
+}
