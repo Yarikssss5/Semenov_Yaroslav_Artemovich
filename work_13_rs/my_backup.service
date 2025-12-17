@@ -1,0 +1,14 @@
+[Unit]
+Description=Backup service
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+User=yarik
+Group=yarik
+ExecStart=/bin/sh -c 'zip -r /home/yarik/Документы/$(date +"%%d-%%m-%%Y-%%H:%%M").zip /home/yarik/Документы'
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

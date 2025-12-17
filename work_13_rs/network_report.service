@@ -1,0 +1,13 @@
+[Unit]
+Description=Network report
+After=graphical-session.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=yarik
+Group=yarik
+ExecStart=/bin/bash -c "ip a | tee /home/yarik/Semenov/network_report.txt"
+
+[Install]
+WantedBy=multi-user.target

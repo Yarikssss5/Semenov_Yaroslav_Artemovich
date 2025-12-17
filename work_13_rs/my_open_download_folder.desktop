@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=open_link
+GenericName=Open Link
+Comment=My Open Link
+StartupNotify=true
+Exec=xdg-open /home/yarik/Загрузки

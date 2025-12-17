@@ -1,0 +1,13 @@
+[Unit]
+Description=Log Date in file service
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+User=yarik
+Group=yarik
+ExecStart=/bin/sh -c 'mkdir -p /home/yarik/Semenov && date >> /home/yarik/Semenov/task_log.txt'
+WorkingDirectory=/home/yarik
+
+[Install]
+WantedBy=multi-user.target

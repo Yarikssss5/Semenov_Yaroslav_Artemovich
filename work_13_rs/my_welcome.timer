@@ -1,0 +1,12 @@
+[Unit]
+Description=Timer for My Program (every 2 minutes)
+
+[Timer]
+# Запуск каждые 2 минуты
+OnCalendar=*:0/2
+
+Persistent=true
+Unit=my_welcome.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=open_link
+GenericName=Open Link
+Comment=My Open Link
+StartupNotify=true
+Exec=xdg-open https://rutube.ru/video/9c2ee5c79ce9f0ae21b58ed977466c38/?r=plwd

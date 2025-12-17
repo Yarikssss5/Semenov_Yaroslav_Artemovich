@@ -1,0 +1,10 @@
+[Unit]
+Description=Run weekly backup when on AC power
+Requires=my_backup.service
+
+[Timer]
+# Запуск каждую неделю в понедельник в 2:00
+OnCalendar=Mon 02:00:00
+
+[Install]
+WantedBy=timers.target
