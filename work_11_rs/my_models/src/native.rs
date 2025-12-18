@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use rand::{Rng, seq::IndexedRandom};
 use redis::{AsyncTypedCommands, ToRedisArgs, ToSingleRedisArg, aio::MultiplexedConnection, streams::StreamReadReply};
 use crate::{Friend, MyAction, MyActionKind, MyFileParsed, MyNotification, MyProduct, MyProductInCart, MyTask, MyTaskPriority};
 
@@ -268,8 +269,17 @@ pub struct MyNotificationService {}
 
 impl MyNotificationService {
     pub async fn init(conn: &mut MultiplexedConnection) -> Result<(), String> {
-        conn.xgroup_create_mkstream("my_notifications", "default", "0").await.map_err(|e: redis::RedisError| e.to_string())?;
-        Ok(())
+
+        match conn.xgroup_create_mkstream("my_notifications", "default", "0").await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                if e.to_string().contains("BUSYGROUP") {
+                    Ok(())
+            } else {
+                Err(e.to_string())
+            }
+            }
+        }
     }
 
     pub async fn push(notification: MyNotification, conn: &mut MultiplexedConnection) -> Result<(), String> {
@@ -277,13 +287,15 @@ impl MyNotificationService {
             ("author", notification.author.clone()), 
             ("text", notification.text.clone()) 
         ];
-        let _ = conn.xadd("my_notifications", "*", &fields).await.map_err(|e: redis::RedisError| e.to_string())?;
+        let result: Option<String> = conn.xadd("my_notifications", "*", &fields).await
+            .map_err(|e: redis::RedisError| e.to_string())?;
+        println!("[DEBUG] Сообщение добавлено с ID: {:#?}", result);
         Ok(())
     }
      
     pub async fn listen_easy(conn: &mut MultiplexedConnection) -> Result<Vec<(String, String)>, String> {
         let result: Option<StreamReadReply> = { conn
-            .xread(&["notifications"], &["$"])
+            .xread(&["my_notifications"], &["0"])
             .await
             .map_err(|e: redis::RedisError| e.to_string())? };
         
@@ -318,4 +330,200 @@ impl MyNotificationService {
         }
         Ok(messages)
     }
+
+    const AUTHORS: &[&str; 10]  =  &[
+                "system",
+                "admin",
+                "alice",
+                "bob",
+                "charlie",
+                "diana",
+                "event_manager",
+                "notification_bot",
+                "support",
+                "security",
+            ];
+    const ACTIONS: [&str; 15] = [
+                "обновлен", "создан", "удален", "изменен", "завершен", 
+                "запущен", "остановлен", "отправлен", "получен", "проверен",
+                "подписан", "отклонен", "утвержден", "заблокирован", "разблокирован",
+            ];
+    const OBJECTS: [&str; 15] = [
+                "пользователь", "документ", "заказ", "задача", "файл",
+                "проект", "транзакция", "сообщение", "настройки", "сервер",
+                "база данных", "отчет", "запрос", "билет", "контракт",
+            ];
+
+    const LOCATIONS: [&str; 8] = [
+                "в системе", "на сервере", "в базе данных", "в очереди",
+                "на production", "на staging", "в тестовой среде", "в облаке",
+            ];
+
+    
+    const ADJECTIVES: [&str; 10] = [
+                "важный", "срочный", "критический", "обычный", "новый",
+                "старый", "тестовый", "финальный", "первый", "последний",
+            ];
+    
+    pub fn generate_random() -> MyNotification {
+        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+        
+        // Выбираем случайного автора
+        let author: String = Self::AUTHORS.choose(&mut rng)
+            .unwrap_or(&"system")
+            .to_string();
+        
+        // Генерируем текст уведомления
+        let text = match rng.gen_range(0..=5) {
+            0 => Self::generate_system_notification(),
+            1 => Self::generate_user_action_notification(),
+            2 => Self::generate_security_notification(),
+            3 => Self::generate_error_notification(),
+            4 => Self::generate_success_notification(),
+            _ => Self::generate_random_text(),
+        };
+        
+        MyNotification { author, text }
+    }
+    
+    pub fn generate_with_author(author: &str) -> MyNotification {
+        let text: String = Self::generate_random_text();
+        MyNotification {
+            author: author.to_string(),
+            text,
+        }
+    }
+    
+    fn generate_system_notification() -> String {
+        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+        let action: &&str = Self::ACTIONS.choose(&mut rng).unwrap();
+        let object: &&str = Self::OBJECTS.choose(&mut rng).unwrap();
+        let location: &&str = Self::LOCATIONS.choose(&mut rng).unwrap();
+        format!("Система: {} {} {}", action, object, location)
+    }
+    
+    fn generate_user_action_notification() -> String {
+        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+        let action: &&str = Self::ACTIONS.choose(&mut rng).unwrap();
+        let object: &&str = Self::OBJECTS.choose(&mut rng).unwrap();
+        let adjective: &&str = Self::ADJECTIVES.choose(&mut rng).unwrap();
+        
+        format!("Пользователь {} {} {}", action, adjective, object)
+    }
+    
+    fn generate_security_notification() -> String {
+        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+        let events: [&str; 6] = [
+            "Обнаружена подозрительная активность",
+            "Попытка несанкционированного доступа",
+            "Изменены права доступа",
+            "Создан новый пользователь",
+            "Изменен пароль администратора",
+            "Зафиксирована неудачная попытка входа",
+        ];
+        let location: &&str = Self::LOCATIONS.choose(&mut rng).unwrap();
+        format!("{} в {}", events.choose(&mut rng).unwrap(), location)
+    }
+    
+    fn generate_error_notification() -> String {
+        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+        let errors: [&str; 6] = [
+            "Ошибка загрузки данных",
+            "Соединение прервано",
+            "Недостаточно памяти",
+            "Таймаут операции",
+            "Ошибка валидации",
+            "Сервис недоступен",
+        ];
+        let location: &&str = Self::LOCATIONS.choose(&mut rng).unwrap();
+        format!("{} {}", errors.choose(&mut rng).unwrap(), location)
+    }
+    
+    fn generate_success_notification() -> String {
+        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+        let successes: [&str; 6] = [
+            "Операция успешно завершена",
+            "Данные сохранены",
+            "Экспорт завершен",
+            "Резервная копия создана",
+            "Обновление установлено",
+            "Проверка пройдена",
+        ];
+        
+        format!("{}", successes.choose(&mut rng).unwrap())
+    }
+    
+    fn generate_random_text() -> String {
+        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+        // Разные шаблоны текста
+        let templates: [&str; 5] = [
+            "{} {} {} {}",
+            "{}: {} {} в {}",
+            "Событие: {} {}",
+            "{} - {}",
+            "[{}] {} {}",
+        ];
+        let template: &&str = templates.choose(&mut rng).unwrap();
+        match rng.gen_range(0..3) {
+            0 => format!(
+                "{} {} {} {} {}", template,
+                Self::ACTIONS.choose(&mut rng).unwrap(),
+                Self::ADJECTIVES.choose(&mut rng).unwrap(),
+                Self::OBJECTS.choose(&mut rng).unwrap(),
+                Self::LOCATIONS.choose(&mut rng).unwrap()
+            ),
+            1 => format!(
+                "В {} {} {} {}",
+                Self::LOCATIONS.choose(&mut rng).unwrap(),
+                Self::ACTIONS.choose(&mut rng).unwrap(),
+                Self::ADJECTIVES.choose(&mut rng).unwrap(),
+                Self::OBJECTS.choose(&mut rng).unwrap()
+            ),
+            _ => format!(
+                "{} {} {}",
+                Self::OBJECTS.choose(&mut rng).unwrap(),
+                Self::ACTIONS.choose(&mut rng).unwrap(),
+                Self::LOCATIONS.choose(&mut rng).unwrap()
+            ),
+        }
+    }
+
+
+    pub async fn listen_simple(conn: &mut MultiplexedConnection) -> Result<Vec<(String, String)>, String> {
+    // Читаем все сообщения с начала потока
+    let result: Option<StreamReadReply> = { conn
+        .xread(&["my_notifications"], &["0"])
+        .await
+        .map_err(|e: redis::RedisError| e.to_string())? };
+    
+    let Some(result) = result else {
+        return Ok(Vec::new());
+    };
+    
+    let mut messages: Vec<(String, String)> = Vec::new();
+    
+    for stream_key in result.keys {
+        for stream_id in stream_key.ids {
+            let author = stream_id.map.get("author")
+                .and_then(|v| match v {
+                    redis::Value::BulkString(bytes) => String::from_utf8(bytes.clone()).ok(),
+                    redis::Value::SimpleString(s) => Some(s.clone()),
+                    _ => None,
+                });
+            
+            let text = stream_id.map.get("text")
+                .and_then(|v| match v {
+                    redis::Value::BulkString(bytes) => String::from_utf8(bytes.clone()).ok(),
+                    redis::Value::SimpleString(s) => Some(s.clone()),
+                    _ => None,
+                });
+            
+            if let (Some(author), Some(text)) = (author, text) {
+                messages.push((author, text));
+            }
+        }
+    }
+    Ok(messages)
+}
+    
 }

@@ -361,7 +361,8 @@ async fn my_get_notifications(state: State<'_, WrappedState>) -> Result<Vec<MyNo
     let mut state: MutexGuard<'_, AppState> = state.lock().await;
     state.check_connection().await?;
     let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
-    let res: Vec<(String, String)> = MyNotificationService::listen_easy(conn).await?;
+    let res: Vec<(String, String)> = MyNotificationService::listen_simple(conn).await?;
+    println!("{:#?}", res);
     let final_res: Vec<MyNotification> = res.iter()
         .map(|(author, text)| {MyNotification { author: author.to_string(), text: text.to_string() }}).collect();
     Ok(final_res)
@@ -386,8 +387,32 @@ async fn setup(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Err
         let mut state: MutexGuard<'_, AppState> = state.lock().await;
         state.check_connection().await?;
         let conn: &mut MultiplexedConnection = state.get_connection_as_mut()?;
+        println!("Try init !");
         match MyNotificationService::init(conn).await {
-            Ok(_) => {},
+            Ok(_) => {
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+                println!("INSERTED");
+                MyNotificationService::push(MyNotificationService::generate_random(), conn).await?;
+            },
             Err(e) => eprintln!("{}", e)
         };
     };

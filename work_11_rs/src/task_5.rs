@@ -102,14 +102,26 @@ pub fn task_5() -> Html {
             });
         })
     };
+    let total: UseStateHandle<String> = use_state(|| String::new());
     let update_user_cart_callback: Callback<MouseEvent> = {
         let cart: UseStateHandle<Vec<MyProductInCart>> = user_cart.clone();
+        let total: UseStateHandle<String> = total.clone();
         Callback::from(move |e: MouseEvent| {
             e.prevent_default();
             let cart: UseStateHandle<Vec<MyProductInCart>> = cart.clone();
+            let total: UseStateHandle<String> = total.clone();
             spawn_local(async move {
                 match my_get_all_products_from_cart().await {
-                    Ok(res) => cart.set(res),
+                    Ok(res) => {
+                        let mut sum = 0u64;
+                        for i in res.clone() {
+                            sum += i.count * i.product.cost;
+                        }
+                        web_sys::console::log_1(&format!("{},{}", sum / 100, sum % 100).to_string().into());
+                        // web_sys::console::log_1(&JsValue::from_str(&format!("{},{}", sum / 100, sum % 100)));
+                        total.set(format!("{},{}", sum / 100, sum % 100));
+                        cart.set(res); 
+                    },
                     Err(e) => web_sys::console::log_1(&e.into()),
                 };
             });
@@ -156,6 +168,7 @@ pub fn task_5() -> Html {
             // Корзина пользователя
             <div>
                 <h1>{"Корзина"}<button onclick={update_user_cart_callback.clone()}>{"Обновить карзину"}</button></h1>
+                <div><h1>{format!("Итого : {}", &*total)}</h1></div>
                 <div>
                     {
                         for user_cart.iter().map(|product: &MyProductInCart| {

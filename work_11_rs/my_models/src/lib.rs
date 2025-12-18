@@ -140,7 +140,6 @@ pub struct MyNotification {
     pub text: String
 }
 
-
 pub struct MyU64(pub u64);
 
 impl From<MyU64> for u64 {
@@ -148,8 +147,6 @@ impl From<MyU64> for u64 {
         value.0
     }
 }
-
-
 
 impl TryFrom<String> for MyU64 {
     type Error = String;

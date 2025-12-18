@@ -1,9 +1,8 @@
-use my_models::{Friend, MyAction, MyFileParsed, MyProductInCart, MyTask};
+use my_models::{Friend, MyAction, MyFileParsed, MyNotification, MyProductInCart, MyTask};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-use crate::{task_1::Task1, task_2::Task2, task_3::Task3, task_4::Task4, task_5::Task5};
+use crate::{task_1::Task1, task_2::Task2, task_3::Task3, task_4::Task4, task_5::Task5, task_6::Task6};
 
 #[wasm_bindgen]
 extern "C" {
@@ -313,11 +312,16 @@ pub(crate) async fn my_decrement_product_count(product_id: u64, increment_by: u6
     }    
 }
 
-async fn my_error() -> Result<(), String> {
-    let res: JsValue = invoke_without_args("my_error").await;
-    web_sys::console::log_1(&res.is_string().into());
-    Ok(())
+// Task 6 :
+pub(crate) async fn my_get_notifications() -> Result<Vec<MyNotification>, String> {
+    let res: JsValue = invoke_without_args("my_get_notifications").await;
+    match serde_wasm_bindgen::from_value::<Vec<MyNotification>>(res.clone()) {
+        Ok(res) => Ok(res),
+        Err(_) => Err(js_value_to_json_str(&res))
+    }
 }
+
+
 
 enum MyPages {
     Main,
@@ -352,11 +356,6 @@ pub fn app() -> Html {
                 <button onclick={Callback::from(move|_:MouseEvent| task_4.set(MyPages::Task4))}>{" Task 4 "}</button> 
                 <button onclick={Callback::from(move|_:MouseEvent| task_5.set(MyPages::Task5))}>{" Task 5 "}</button> 
                 <button onclick={Callback::from(move|_:MouseEvent| task_6.set(MyPages::Task6))}>{" Task 6 "}</button>
-                <button onclick={Callback::from(move|_:MouseEvent| {
-                    spawn_local(async move {
-                        let _ = my_error().await;
-                    });
-                })} >{" My Error ! "}</button>
             </main>
         },
         MyPages::Task1 => html!{ <Task1 back_callback={back_to_main_callback.clone()} /> },
@@ -364,6 +363,6 @@ pub fn app() -> Html {
         MyPages::Task3 => html!( <Task3 /> ),
         MyPages::Task4 => html!( <Task4 /> ),
         MyPages::Task5 => html!( <Task5 /> ),
-        MyPages::Task6 => todo!(),
+        MyPages::Task6 => html!( <Task6 /> ),
     }
 }
