@@ -1,0 +1,45 @@
+services:
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+  
+  prometheus-push:
+    image: prom/pushgateway:master
+    container_name: prom-push-gateway
+    ports:
+      - "9091:9091"
+
+  elasticsearcht:
+    container_name: elasticsearcht
+    image: elasticsearch:9.2.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - "./esdata:/usr/share/elasticsearch/data"
+  
+  jaeger:
+   image: jaegertracing/all-in-one:1.76.0
+   ports:
+     - "16686:16686"    # Web UI
+     - "14268:14268"    # Collector HTTP
+     - "14250:14250"    # Collector gRPC
+     - "6831:6831/udp"  # Agent UDP (compact thrift)
+     - "6832:6832/udp"  # Agent UDP (binary thrift)
+     - "5778:5778"      # Config HTTP
+     - "5775:5775/udp"  # Agent UDP (compact thrift)
+     - "4317:4317"      # OTLP gRPC
+     - "4318:4318"      # OTLP HTTP
+     - "9411:9411"      # Zipkin
+   environment:
+     - COLLECTOR_OTLP_ENABLED=true
+     - LOG_LEVEL=debug 
+
